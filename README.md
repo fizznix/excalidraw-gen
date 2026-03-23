@@ -24,17 +24,29 @@ Define your diagram with nodes, edges, types, colors, sizes, and arrow styles â€
 
 ## Installation
 
+### npx (no install required)
+
+Run directly without installing anything:
+
 ```bash
-git clone https://github.com/your-username/excalidraw-gen.git
+npx excalidraw-gen generate diagram.json --out out.excalidraw
+```
+
+### Global install
+
+```bash
+npm install -g excalidraw-gen
+excalidraw-gen generate diagram.json --out out.excalidraw
+```
+
+### From source
+
+```bash
+git clone https://github.com/fizznix/excalidraw-gen.git
 cd excalidraw-gen
 npm install
 npm run build
-```
-
-To use globally:
-
-```bash
-npm link
+npm link   # makes excalidraw-gen available globally
 ```
 
 ---
