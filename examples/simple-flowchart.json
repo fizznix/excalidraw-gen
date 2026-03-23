@@ -1,0 +1,17 @@
+{
+  "type": "flowchart",
+  "title": "Simple Login Flow",
+  "nodes": [
+    { "id": "user", "label": "User", "type": "start" },
+    { "id": "login_form", "label": "Login Form", "type": "process" },
+    { "id": "auth_check", "label": "Auth Check", "type": "decision" },
+    { "id": "dashboard", "label": "Dashboard", "type": "process" },
+    { "id": "error", "label": "Error Page", "type": "end" }
+  ],
+  "edges": [
+    { "from": "user", "to": "login_form" },
+    { "from": "login_form", "to": "auth_check", "label": "Submit" },
+    { "from": "auth_check", "to": "dashboard", "label": "Valid" },
+    { "from": "auth_check", "to": "error", "label": "Invalid" }
+  ]
+}

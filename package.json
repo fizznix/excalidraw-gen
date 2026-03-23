@@ -1,0 +1,47 @@
+{
+  "name": "excalidraw-gen",
+  "version": "0.1.0",
+  "author": {
+    "name": "Nixon Kurian",
+    "email": "nixonkurian.nk@gmail.com"
+  },
+  "description": "CLI tool to generate Excalidraw-compatible JSON diagrams from structured input specs",
+  "main": "dist/cli.js",
+  "bin": {
+    "excalidraw-gen": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run lint && npm run build && npm test"
+  },
+  "keywords": [
+    "excalidraw",
+    "diagram",
+    "cli",
+    "generator"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0",
+    "js-yaml": "^4.1.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}

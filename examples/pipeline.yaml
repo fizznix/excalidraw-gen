@@ -1,0 +1,103 @@
+type: flowchart
+title: CI/CD Pipeline (YAML)
+
+nodes:
+  - id: dev
+    label: Developer
+    type: start
+    style:
+      backgroundColor: "#a5d8ff"
+      strokeColor: "#1971c2"
+      shape: ellipse
+
+  - id: push
+    label: Git Push
+    type: process
+
+  - id: ci
+    label: CI Build & Test
+    type: process
+    style:
+      backgroundColor: "#d0bfff"
+      strokeColor: "#7048e8"
+      width: 200
+
+  - id: gate
+    label: Quality Gate
+    type: decision
+    style:
+      strokeStyle: dashed
+      strokeWidth: 3
+
+  - id: deploy_staging
+    label: Deploy to Staging
+    type: process
+    style:
+      backgroundColor: "#fff3bf"
+      strokeColor: "#f08c00"
+
+  - id: approve
+    label: Manual Approval
+    type: decision
+    style:
+      backgroundColor: "#ffe8cc"
+      strokeColor: "#fd7e14"
+      strokeStyle: dashed
+
+  - id: deploy_prod
+    label: Deploy to Production
+    type: process
+    style:
+      backgroundColor: "#b2f2bb"
+      strokeColor: "#2f9e44"
+      strokeWidth: 3
+
+  - id: fail
+    label: Notify & Fail
+    type: end
+    style:
+      backgroundColor: "#ffc9c9"
+      strokeColor: "#c92a2a"
+      strokeStyle: dashed
+
+edges:
+  - from: dev
+    to: push
+
+  - from: push
+    to: ci
+    label: trigger
+
+  - from: ci
+    to: gate
+    label: results
+
+  - from: gate
+    to: deploy_staging
+    label: Pass
+    style:
+      strokeColor: "#2f9e44"
+
+  - from: gate
+    to: fail
+    label: Fail
+    style:
+      strokeColor: "#c92a2a"
+      strokeStyle: dashed
+
+  - from: deploy_staging
+    to: approve
+
+  - from: approve
+    to: deploy_prod
+    label: Approved
+    style:
+      strokeColor: "#2f9e44"
+      strokeWidth: 2
+
+  - from: approve
+    to: fail
+    label: Rejected
+    style:
+      strokeColor: "#c92a2a"
+      strokeStyle: dashed

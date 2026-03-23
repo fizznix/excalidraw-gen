@@ -1,0 +1,23 @@
+{
+  "type": "architecture",
+  "title": "3-Tier Web App",
+  "nodes": [
+    { "id": "browser", "label": "Browser", "type": "user" },
+    { "id": "cdn", "label": "CDN", "type": "external" },
+    { "id": "gateway", "label": "API Gateway", "type": "gateway" },
+    { "id": "auth_service", "label": "Auth Service", "type": "service" },
+    { "id": "app_service", "label": "App Service", "type": "service" },
+    { "id": "redis", "label": "Redis Cache", "type": "cache" },
+    { "id": "postgres", "label": "PostgreSQL", "type": "db" },
+    { "id": "s3", "label": "S3 Storage", "type": "storage" }
+  ],
+  "edges": [
+    { "from": "browser", "to": "cdn" },
+    { "from": "browser", "to": "gateway" },
+    { "from": "gateway", "to": "auth_service", "label": "auth" },
+    { "from": "gateway", "to": "app_service", "label": "api" },
+    { "from": "app_service", "to": "redis", "label": "cache" },
+    { "from": "app_service", "to": "postgres", "label": "query" },
+    { "from": "app_service", "to": "s3", "label": "files" }
+  ]
+}

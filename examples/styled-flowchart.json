@@ -1,0 +1,97 @@
+{
+  "type": "flowchart",
+  "title": "Payment Processing (Styled)",
+  "nodes": [
+    {
+      "id": "customer",
+      "label": "Customer",
+      "type": "start",
+      "style": {
+        "backgroundColor": "#a5d8ff",
+        "strokeColor": "#1971c2",
+        "strokeWidth": 3,
+        "shape": "ellipse",
+        "width": 160,
+        "height": 60
+      }
+    },
+    {
+      "id": "checkout",
+      "label": "Checkout Form",
+      "type": "process",
+      "style": {
+        "backgroundColor": "#d3f9d8",
+        "strokeColor": "#2f9e44",
+        "width": 200
+      }
+    },
+    {
+      "id": "validate",
+      "label": "Validate Card",
+      "type": "decision",
+      "style": {
+        "fillStyle": "hachure",
+        "strokeWidth": 3
+      }
+    },
+    {
+      "id": "charge",
+      "label": "Charge Payment Gateway",
+      "type": "process",
+      "style": {
+        "backgroundColor": "#fff3bf",
+        "strokeColor": "#f08c00",
+        "width": 240
+      }
+    },
+    {
+      "id": "retry",
+      "label": "Retry / Error Page",
+      "type": "end",
+      "style": {
+        "backgroundColor": "#ffc9c9",
+        "strokeColor": "#c92a2a",
+        "strokeStyle": "dashed",
+        "opacity": 85
+      }
+    },
+    {
+      "id": "success",
+      "label": "Order Confirmed",
+      "type": "end",
+      "style": {
+        "backgroundColor": "#b2f2bb",
+        "strokeColor": "#2f9e44",
+        "strokeWidth": 3
+      }
+    }
+  ],
+  "edges": [
+    { "from": "customer", "to": "checkout" },
+    { "from": "checkout", "to": "validate", "label": "Submit" },
+    {
+      "from": "validate",
+      "to": "charge",
+      "label": "Valid",
+      "style": { "strokeColor": "#2f9e44", "strokeWidth": 2 }
+    },
+    {
+      "from": "validate",
+      "to": "retry",
+      "label": "Invalid",
+      "style": { "strokeColor": "#c92a2a", "strokeStyle": "dashed" }
+    },
+    {
+      "from": "charge",
+      "to": "success",
+      "label": "Approved",
+      "style": { "strokeColor": "#2f9e44" }
+    },
+    {
+      "from": "charge",
+      "to": "retry",
+      "label": "Declined",
+      "style": { "strokeColor": "#c92a2a", "strokeStyle": "dashed" }
+    }
+  ]
+}
