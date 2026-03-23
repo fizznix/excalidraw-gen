@@ -33,6 +33,14 @@
     "generator"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fizznix/excalidraw-gen.git"
+  },
+  "homepage": "https://github.com/fizznix/excalidraw-gen#readme",
+  "bugs": {
+    "url": "https://github.com/fizznix/excalidraw-gen/issues"
+  },
   "dependencies": {
     "commander": "^12.0.0",
     "js-yaml": "^4.1.1"
