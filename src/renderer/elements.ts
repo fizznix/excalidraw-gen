@@ -148,6 +148,8 @@ export function createArrowElement(
   const strokeWidth     = edge.style?.strokeWidth  ?? 2;
   const opacity         = edge.style?.opacity      ?? 100;
 
+  const labelId = edge.label ? `arrow-${edge.from}-${edge.to}-label` : null;
+
   const arrow: ExcalidrawArrow = {
     ...baseFields(arrowId, sourceAnchor.x, sourceAnchor.y, width, height),
     type: "arrow",
@@ -158,7 +160,7 @@ export function createArrowElement(
     opacity,
     roughness: 0,
     roundness: null,
-    boundElements: null,
+    boundElements: labelId ? [{ type: "text", id: labelId }] : null,
     points,
     lastCommittedPoint: null,
     startArrowhead: edge.bidirectional ? "arrow" : null,
@@ -251,7 +253,7 @@ export function createArrowLabel(
     textAlign: "center",
     verticalAlign: "middle",
     baseline: Math.ceil(13 * 0.8),
-    containerId: null,
+    containerId: `arrow-${edge.from}-${edge.to}`,
     lineHeight: LINE_HEIGHT,
   };
 }
