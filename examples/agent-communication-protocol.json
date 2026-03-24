@@ -1,0 +1,21 @@
+{
+  "type": "architecture",
+  "title": "Agent Communication Protocol — LangGraph & CrewAI",
+  "nodes": [
+    { "id": "user",       "label": "User",                    "type": "user" },
+    { "id": "router",     "label": "Protocol Router",         "type": "gateway" },
+    { "id": "langgraph",  "label": "LangGraph Agent",         "type": "ai" },
+    { "id": "crewai",     "label": "CrewAI Agent",            "type": "ai" },
+    { "id": "shared_mem", "label": "Shared State / Memory",   "type": "db" },
+    { "id": "response",   "label": "Response\n(back to User)", "type": "service" }
+  ],
+  "edges": [
+    { "from": "user",       "to": "router",     "label": "request" },
+    { "from": "router",     "to": "langgraph",  "label": "route" },
+    { "from": "router",     "to": "crewai",     "label": "route" },
+    { "from": "langgraph",  "to": "shared_mem", "label": "read/write", "bidirectional": true },
+    { "from": "crewai",     "to": "shared_mem", "label": "read/write", "bidirectional": true },
+    { "from": "langgraph",  "to": "response",   "label": "output" },
+    { "from": "crewai",     "to": "response",   "label": "output" }
+  ]
+}

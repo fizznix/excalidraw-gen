@@ -1,10 +1,11 @@
 import type { Diagram, LayoutNode } from "../types/index.js";
 
 const DEFAULT_NODE_WIDTH = 180;
+const MAX_NODE_WIDTH = 260;
 const DEFAULT_NODE_HEIGHT = 80;
 const MIN_NODE_HEIGHT = 60;
-const SPACING_X = 220; // horizontal gap between node left edges
-const SPACING_GAP_Y = 70; // vertical gap between bottom of one row and top of next
+const MIN_GAP_X = 60;       // minimum horizontal gap between adjacent nodes
+const SPACING_GAP_Y = 90;   // vertical gap between bottom of one row and top of next
 const MARGIN_X = 80;
 const MARGIN_Y = 80;
 
@@ -31,6 +32,14 @@ function effectiveHeight(label: string, nodeWidth: number, styleHeight?: number)
   const lines = estimateLines(label, nodeWidth);
   const textH = Math.ceil(lines * FONT_SIZE * LINE_HEIGHT);
   return Math.max(MIN_NODE_HEIGHT, textH + TEXT_PADDING_Y);
+}
+
+/** Compute a node width that fits the longest line comfortably. */
+function effectiveWidth(label: string, styleWidth?: number): number {
+  if (styleWidth !== undefined) return styleWidth;
+  const longestLine = Math.max(...label.split("\n").map((l) => l.length));
+  const needed = longestLine * CHAR_WIDTH_EST + TEXT_PADDING_X + 24; // 24px extra breathing room
+  return Math.min(MAX_NODE_WIDTH, Math.max(DEFAULT_NODE_WIDTH, needed));
 }
 
 /**
@@ -109,19 +118,26 @@ export function layoutDAG(diagram: Diagram): LayoutNode[] {
   }
   const sortedLevels = [...levelGroups.keys()].sort((a, b) => a - b);
 
-  // Widest level (node count) drives the total canvas width
-  const maxLevelCount = Math.max(...sortedLevels.map((l) => levelGroups.get(l)!.length));
-  const totalCanvasWidth = maxLevelCount * SPACING_X;
-
   // ── Compute effective dimensions per node ─────────────────────────────────
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
   const nodeDims = new Map<string, { width: number; height: number }>();
   for (const id of nodeIds) {
     const n = nodeMap.get(id)!;
-    const w = n.style?.width ?? DEFAULT_NODE_WIDTH;
+    const w = effectiveWidth(n.label, n.style?.width);
     const h = effectiveHeight(n.label, w, n.style?.height);
     nodeDims.set(id, { width: w, height: h });
   }
+
+  // ── Compute per-level row width (sum of node widths + gaps) ───────────────
+  // This replaces the old fixed SPACING_X approach.
+  function levelRowWidth(group: string[]): number {
+    let total = 0;
+    for (const id of group) total += nodeDims.get(id)!.width;
+    total += Math.max(0, group.length - 1) * MIN_GAP_X;
+    return total;
+  }
+
+  const maxRowWidth = Math.max(...sortedLevels.map((l) => levelRowWidth(levelGroups.get(l)!)));
 
   // ── Compute cumulative Y per level (dynamic row heights) ──────────────────
   let cumulativeY = MARGIN_Y;
@@ -139,9 +155,10 @@ export function layoutDAG(diagram: Diagram): LayoutNode[] {
     const group = levelGroups.get(lvl)!;
     group.sort((a, b) => nodeIds.indexOf(a) - nodeIds.indexOf(b));
 
-    const levelWidth = group.length * SPACING_X;
-    const offsetX = MARGIN_X + Math.floor((totalCanvasWidth - levelWidth) / 2);
+    const rowW = levelRowWidth(group);
+    const offsetX = MARGIN_X + Math.floor((maxRowWidth - rowW) / 2);
 
+    let cursorX = offsetX;
     group.forEach((id, colIndex) => {
       const inputNode = nodeMap.get(id)!;
       const { width, height } = nodeDims.get(id)!;
@@ -151,13 +168,14 @@ export function layoutDAG(diagram: Diagram): LayoutNode[] {
         type: inputNode.type ?? "process",
         metadata: inputNode.metadata,
         style: inputNode.style,
-        x: offsetX + colIndex * SPACING_X,
+        x: cursorX,
         y: levelY.get(lvl)!,
         width,
         height,
         level: lvl,
         colIndex,
       });
+      cursorX += width + MIN_GAP_X;
     });
   }
 

@@ -4,6 +4,7 @@ import type {
   LayoutEdge,
   TemplateDefinition,
   ExcalidrawElement,
+  ExcalidrawBoundElement,
 } from "../types/index.js";
 import { getNodeDef } from "../templates/index.js";
 import { routeArrow, VERTICAL_THRESHOLD } from "../layout/arrow-router.js";
@@ -50,8 +51,11 @@ export function render(
     edgeGroups.get(key)!.push(edge);
   }
 
-  // Count per-side groupings
+  // Count per-side groupings (source side)
   const sideGroups = new Map<string, LayoutEdge[]>();
+  // Also group by target side for staggering incoming arrows
+  const targetSideGroups = new Map<string, LayoutEdge[]>();
+
   for (const [fromId, edges] of edgeGroups) {
     const source = nodeMap.get(fromId);
     if (!source) continue;
@@ -61,17 +65,28 @@ export function render(
       // Determine side using the same threshold as the arrow router
       const dx = (target.x + target.width / 2) - (source.x + source.width / 2);
       const dy = (target.y + target.height / 2) - (source.y + source.height / 2);
-      const side =
+      const sourceSide =
         Math.abs(dy) > VERTICAL_THRESHOLD
           ? dy > 0 ? "bottom" : "top"
           : dx >= 0 ? "right" : "left";
-      const sideKey = `${fromId}:${side}`;
+      const targetSide =
+        Math.abs(dy) > VERTICAL_THRESHOLD
+          ? dy > 0 ? "top" : "bottom"
+          : dx >= 0 ? "left" : "right";
+
+      const sideKey = `${fromId}:${sourceSide}`;
       if (!sideGroups.has(sideKey)) sideGroups.set(sideKey, []);
       sideGroups.get(sideKey)!.push(edge);
+
+      const tKey = `${edge.to}:${targetSide}`;
+      if (!targetSideGroups.has(tKey)) targetSideGroups.set(tKey, []);
+      targetSideGroups.get(tKey)!.push(edge);
     }
   }
 
-  // Render arrows
+  // Render arrows + collect arrow bindings per shape
+  const arrowBindings = new Map<string, ExcalidrawBoundElement[]>();
+
   for (const [sideKey, sideEdges] of sideGroups) {
     const fromId = sideKey.split(":")[0];
     const source = nodeMap.get(fromId);
@@ -81,17 +96,44 @@ export function render(
       const target = nodeMap.get(edge.to);
       if (!target) return;
 
-      const route = routeArrow(source, target, i, sideEdges.length);
+      // Look up target-side stagger info
+      const dx = (target.x + target.width / 2) - (source.x + source.width / 2);
+      const dy = (target.y + target.height / 2) - (source.y + source.height / 2);
+      const targetSide =
+        Math.abs(dy) > VERTICAL_THRESHOLD
+          ? dy > 0 ? "top" : "bottom"
+          : dx >= 0 ? "left" : "right";
+      const tKey = `${edge.to}:${targetSide}`;
+      const tGroup = targetSideGroups.get(tKey) ?? [edge];
+      const tIndex = tGroup.indexOf(edge);
+
+      const route = routeArrow(source, target, i, sideEdges.length, Math.max(0, tIndex), tGroup.length, layoutNodes);
 
       // Arrow stroke = target node's stroke color
       const targetTemplate = getNodeDef(template, target.type);
       const strokeColor = targetTemplate.style.strokeColor;
 
-      elements.push(createArrowElement(edge, route, strokeColor));
+      const arrowEl = createArrowElement(edge, route, strokeColor);
+      elements.push(arrowEl);
       if (edge.label) {
         elements.push(createArrowLabel(edge, route));
       }
+
+      // Track which arrows bind to each shape
+      const arrowRef: ExcalidrawBoundElement = { type: "arrow", id: arrowEl.id };
+      if (!arrowBindings.has(edge.from)) arrowBindings.set(edge.from, []);
+      arrowBindings.get(edge.from)!.push(arrowRef);
+      if (!arrowBindings.has(edge.to)) arrowBindings.set(edge.to, []);
+      arrowBindings.get(edge.to)!.push(arrowRef);
     });
+  }
+
+  // Patch shape boundElements to include their connected arrows
+  for (const el of elements) {
+    if ((el.type === "rectangle" || el.type === "ellipse") && arrowBindings.has(el.id)) {
+      const existing = el.boundElements ?? [];
+      (el as any).boundElements = [...existing, ...arrowBindings.get(el.id)!];
+    }
   }
 
   return elements;

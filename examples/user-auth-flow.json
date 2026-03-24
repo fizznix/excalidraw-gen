@@ -1,0 +1,19 @@
+{
+  "type": "flowchart",
+  "title": "User Authentication Flow",
+  "nodes": [
+    { "id": "user",        "label": "User",                   "type": "start" },
+    { "id": "login_form",  "label": "Login Form",             "type": "io" },
+    { "id": "validate",    "label": "Validate Credentials",   "type": "decision" },
+    { "id": "gen_token",   "label": "Generate JWT Token",     "type": "subprocess" },
+    { "id": "dashboard",   "label": "Dashboard",              "type": "end" },
+    { "id": "error",       "label": "Show Error\n(Retry)",    "type": "end" }
+  ],
+  "edges": [
+    { "from": "user",       "to": "login_form", "label": "open" },
+    { "from": "login_form", "to": "validate",   "label": "submit" },
+    { "from": "validate",   "to": "gen_token",  "label": "valid" },
+    { "from": "validate",   "to": "error",      "label": "invalid" },
+    { "from": "gen_token",  "to": "dashboard",  "label": "authenticated" }
+  ]
+}

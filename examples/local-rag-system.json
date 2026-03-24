@@ -1,0 +1,40 @@
+{
+  "type": "architecture",
+  "title": "Local RAG System — Ingestion & Retrieval Pipelines",
+  "nodes": [
+    { "id": "docs_source",    "label": "Document Sources\n(PDF, MD, HTML)",  "type": "storage" },
+    { "id": "file_loader",    "label": "File Loader",                        "type": "service" },
+    { "id": "splitter",       "label": "Text Splitter\n(Chunking)",          "type": "service" },
+    { "id": "embed_ingest",   "label": "Embedding Model\n(local)",           "type": "ai" },
+    { "id": "vector_db",      "label": "Vector Store\n(ChromaDB / FAISS)",   "type": "db" },
+    { "id": "metadata_store", "label": "Metadata Store\n(SQLite)",           "type": "db" },
+
+    { "id": "user",           "label": "User",                               "type": "user" },
+    { "id": "query_input",    "label": "Query Interface",                    "type": "frontend" },
+    { "id": "query_rewrite",  "label": "Query Rewriter\n(HyDE / Expansion)", "type": "service" },
+    { "id": "embed_query",    "label": "Embedding Model\n(local)",           "type": "ai" },
+    { "id": "retriever",      "label": "Retriever\n(Top-K Similarity)",      "type": "service" },
+    { "id": "reranker",       "label": "Re-Ranker\n(Cross-Encoder)",         "type": "ai" },
+    { "id": "context_build",  "label": "Context Builder\n(Prompt Assembly)",  "type": "service" },
+    { "id": "llm",            "label": "Local LLM\n(Ollama / llama.cpp)",    "type": "ai" },
+    { "id": "response",       "label": "Generated Answer\n+ Citations",     "type": "frontend" }
+  ],
+  "edges": [
+    { "from": "docs_source",   "to": "file_loader",    "label": "raw files" },
+    { "from": "file_loader",   "to": "splitter",       "label": "parsed text" },
+    { "from": "splitter",      "to": "embed_ingest",   "label": "chunks" },
+    { "from": "embed_ingest",  "to": "vector_db",      "label": "vectors" },
+    { "from": "splitter",      "to": "metadata_store", "label": "chunk metadata" },
+
+    { "from": "user",          "to": "query_input",    "label": "question" },
+    { "from": "query_input",   "to": "query_rewrite",  "label": "raw query" },
+    { "from": "query_rewrite", "to": "embed_query",    "label": "expanded query" },
+    { "from": "embed_query",   "to": "retriever",      "label": "query vector" },
+    { "from": "retriever",     "to": "vector_db",      "label": "search" },
+    { "from": "retriever",     "to": "metadata_store", "label": "filter" },
+    { "from": "retriever",     "to": "reranker",       "label": "candidates" },
+    { "from": "reranker",      "to": "context_build",  "label": "top chunks" },
+    { "from": "context_build", "to": "llm",            "label": "prompt" },
+    { "from": "llm",           "to": "response",       "label": "answer" }
+  ]
+}

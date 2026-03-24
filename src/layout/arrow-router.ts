@@ -37,23 +37,27 @@ function getEdgeAnchor(node: LayoutNode, side: EdgeSide): EdgeAnchor {
   return { x, y, side, fixedPoint: FIXED_POINTS[side] };
 }
 
-/** Stagger start anchor for N arrows leaving the same edge.
- * Only applied to left/right exits — for top/bottom, the step routing
- * pattern naturally keeps arrows distinguishable without staggering the start.
- */
+/** Stagger anchor for N arrows sharing the same edge of a node. */
 function staggerAnchor(
   node: LayoutNode,
   side: EdgeSide,
   index: number,
   total: number
 ): EdgeAnchor {
-  // Top/bottom exits: always use center — step routing handles fan-out visually
-  if (side === "top" || side === "bottom" || total <= 1) {
+  if (total <= 1) {
     return getEdgeAnchor(node, side);
   }
 
-  // Left/right exits: stagger vertically along the edge
   const pct = 0.2 + (0.6 * index) / (total - 1);
+
+  if (side === "top" || side === "bottom") {
+    // Stagger horizontally along the top/bottom edge
+    const x = node.x + node.width * pct;
+    const y = side === "bottom" ? node.y + node.height : node.y;
+    return { x, y, side, fixedPoint: [pct, FIXED_POINTS[side][1]] };
+  }
+
+  // Left/right exits: stagger vertically along the edge
   const x = side === "right" ? node.x + node.width : node.x;
   const y = node.y + node.height * pct;
 
@@ -183,6 +187,94 @@ function buildElbowPoints(
   return [[0, 0], [dx, dy]];
 }
 
+// ── Obstacle avoidance ───────────────────────────────────────────────────────
+
+const OBSTACLE_PAD = 20;
+
+/**
+ * Post-process elbow points so vertical segments don't cross through
+ * intermediate nodes. When a vertical segment intersects a node, a
+ * horizontal detour is inserted around the obstacle.
+ */
+function avoidObstacles(
+  relPoints: [number, number][],
+  sourceAnchor: EdgeAnchor,
+  allNodes: LayoutNode[],
+  sourceId: string,
+  targetId: string
+): [number, number][] {
+  const excludeIds = new Set([sourceId, targetId]);
+  const obstacles = allNodes.filter((n) => !excludeIds.has(n.id));
+  if (obstacles.length === 0) return relPoints;
+
+  const toAbs = (p: [number, number]): [number, number] => [
+    sourceAnchor.x + p[0],
+    sourceAnchor.y + p[1],
+  ];
+  const toRel = (p: [number, number]): [number, number] => [
+    p[0] - sourceAnchor.x,
+    p[1] - sourceAnchor.y,
+  ];
+
+  const abs = relPoints.map(toAbs);
+  const result: [number, number][] = [abs[0]];
+
+  for (let i = 0; i < abs.length - 1; i++) {
+    const [x1, y1] = abs[i];
+    const [x2, y2] = abs[i + 1];
+
+    const isVertical = Math.abs(x2 - x1) < 2;
+    if (isVertical) {
+      const segX = x1;
+      const minY = Math.min(y1, y2);
+      const maxY = Math.max(y1, y2);
+      const goingDown = y2 > y1;
+
+      // Find nodes whose padded bounding box is crossed by this vertical segment
+      const blockers = obstacles.filter(
+        (n) =>
+          segX > n.x - OBSTACLE_PAD &&
+          segX < n.x + n.width + OBSTACLE_PAD &&
+          maxY > n.y &&
+          minY < n.y + n.height
+      );
+
+      if (blockers.length > 0) {
+        // Combined bounding box of all blockers on this segment
+        const bLeft = Math.min(...blockers.map((n) => n.x));
+        const bRight = Math.max(...blockers.map((n) => n.x + n.width));
+        const bTop = Math.min(...blockers.map((n) => n.y));
+        const bBottom = Math.max(...blockers.map((n) => n.y + n.height));
+
+        // Detour left or right — pick the closer clear side
+        const leftX = bLeft - OBSTACLE_PAD;
+        const rightX = bRight + OBSTACLE_PAD;
+        const detourX =
+          Math.abs(segX - leftX) <= Math.abs(segX - rightX) ? leftX : rightX;
+
+        // Enter detour before the blocker, exit after it
+        const enterY = goingDown
+          ? Math.max(y1, bTop - OBSTACLE_PAD)
+          : Math.min(y1, bBottom + OBSTACLE_PAD);
+        const exitY = goingDown
+          ? Math.min(y2, bBottom + OBSTACLE_PAD)
+          : Math.max(y2, bTop - OBSTACLE_PAD);
+
+        result.push([segX, enterY]);
+        result.push([detourX, enterY]);
+        result.push([detourX, exitY]);
+        result.push([segX, exitY]);
+        result.push(abs[i + 1]);
+        continue;
+      }
+    }
+
+    result.push(abs[i + 1]);
+  }
+
+  return result.map(toRel);
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -190,19 +282,30 @@ function buildElbowPoints(
  *
  * @param sourceEdgeIndex  0-based index of this arrow among all arrows sharing the same source edge
  * @param totalFromSource  total count of arrows leaving from the same edge of source
+ * @param targetEdgeIndex  0-based index of this arrow among all arrows arriving at the same target edge
+ * @param totalToTarget    total count of arrows arriving at the same edge of target
+ * @param allNodes         all layout nodes — used for obstacle avoidance
  */
 export function routeArrow(
   source: LayoutNode,
   target: LayoutNode,
   sourceEdgeIndex = 0,
-  totalFromSource = 1
+  totalFromSource = 1,
+  targetEdgeIndex = 0,
+  totalToTarget = 1,
+  allNodes: LayoutNode[] = []
 ): ArrowRoute {
   const { sourceSide, targetSide } = chooseSides(source, target);
 
   const sourceAnchor = staggerAnchor(source, sourceSide, sourceEdgeIndex, totalFromSource);
-  const targetAnchor = getEdgeAnchor(target, targetSide);
+  const targetAnchor = staggerAnchor(target, targetSide, targetEdgeIndex, totalToTarget);
 
-  const points = buildElbowPoints(sourceAnchor, targetAnchor);
+  let points = buildElbowPoints(sourceAnchor, targetAnchor);
+
+  if (allNodes.length > 0) {
+    points = avoidObstacles(points, sourceAnchor, allNodes, source.id, target.id);
+  }
+
   const { width, height } = boundingBox(points);
 
   return { sourceAnchor, targetAnchor, points, width, height };

@@ -50,15 +50,15 @@ describe("arrow router", () => {
     expect(route.height).toBe(Math.max(expectedH, 1));
   });
 
-  it("staggered bottom-exit arrows share the same center start x (step routing)", () => {
-    // Bottom exits no longer stagger the start point — step routing handles fan-out
+  it("staggered bottom-exit arrows spread horizontally along the edge", () => {
     const source = makeNode("a", 80, 80);
     const t1 = makeNode("b1", 80, 310);
     const t2 = makeNode("b2", 300, 310);
     const r1 = routeArrow(source, t1, 0, 2);
     const r2 = routeArrow(source, t2, 1, 2);
-    // Both start from bottom-center of source (x = 80 + 180/2 = 170)
-    expect(r1.sourceAnchor.x).toBe(r2.sourceAnchor.x);
+    // With 2 arrows from bottom, they stagger at 20% and 80% of node width
+    expect(r1.sourceAnchor.x).not.toBe(r2.sourceAnchor.x);
+    expect(r1.sourceAnchor.x).toBeLessThan(r2.sourceAnchor.x);
     expect(r1.sourceAnchor.side).toBe("bottom");
     expect(r2.sourceAnchor.side).toBe("bottom");
   });
